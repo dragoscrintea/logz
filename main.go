@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -14,11 +15,11 @@ import (
 )
 
 func main() {
-	projectId := "tuleyprod"
-	topicName := "log-container-engine"
+	projectId := os.Getenv("GCLOUD_PROJECT_ID")
+	topicName := os.Getenv("PUBSUB_TOPIC")
+	logglyUrl := os.Getenv("LOGGLY_URL")
 	subName := topicName + "-2loggly"
 	ackDeadline := time.Second * 20
-	logglyUrl := "http://logs-01.loggly.com/bulk/your_uuid/tag/gke/"
 
 	client, err := google.DefaultClient(context.Background(), pubsub.ScopePubSub)
 	if err != nil {
