@@ -12,6 +12,10 @@ dependencies:
   override:
     - docker build -t quay.io/rainchasers/pubsub2loggly .
 
+test:
+  override:
+    - echo skipping
+
 deployment:
   hub: 
     branch: master
