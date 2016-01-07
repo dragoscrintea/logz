@@ -6,11 +6,11 @@ dependencies:
   pre:
     - GO15VENDOREXPERIMENT=1 go build -o ./deamon -a .
   override:
-    - docker build -t quay.io/robtuley/pubsub2loggly .
+    - docker build -t quay.io/rainchasers/pubsub2loggly .
 
 deployment:
   hub: 
     branch: master
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USERNAME -p $DOCKER_PWD $DOCKER_URL
-      - docker push quay.io/robtuley/pubsub2loggly
+      - docker push quay.io/rainchasers/pubsub2loggly
