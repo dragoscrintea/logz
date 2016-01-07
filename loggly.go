@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -41,25 +40,41 @@ func postToLoggly(url string, logC <-chan []byte) {
 			wg.Add(1)
 			go func(data bytes.Buffer) {
 				defer wg.Done()
+				start := time.Now()
 
 				req, err := http.NewRequest("POST", url, &data)
 				if err != nil {
-					log.Println(err)
+					logInfo(LogData{
+						"event": "request.error.create",
+						"error": err.Error(),
+					})
 					return
 				}
 				req.Header.Set("Content-Type", "text/plain")
 
 				resp, err := client.Do(req)
 				if err != nil {
-					log.Println(err)
+					logInfo(LogData{
+						"event": "request.error.execute",
+						"error": err.Error(),
+					})
 					return
 				}
 				defer resp.Body.Close()
 
 				if resp.StatusCode != http.StatusOK {
-					log.Println("Loggly POST failed with status code ", resp.StatusCode)
+					logInfo(LogData{
+						"event":       "request.error.response",
+						"status_code": resp.StatusCode,
+					})
 					return
 				}
+
+				logInfo(LogData{
+					"event": "request.ok",
+					"timer": time.Now().Sub(start).Nanoseconds(),
+					"size":  buffer.Len(),
+				})
 
 			}(buffer)
 		}

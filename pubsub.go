@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"time"
 
 	"golang.org/x/net/context"
@@ -17,18 +16,27 @@ func consumePubSubMsgs(projectId string, topicName string) <-chan []byte {
 
 	client, err := google.DefaultClient(context.Background(), pubsub.ScopePubSub)
 	if err != nil {
-		log.Fatal("Failed to create oAuth2 HTTP client", err)
+		logFatal(LogData{
+			"event": "pubsub.error.auth",
+			"error": err.Error(),
+		})
 	}
 	ctx := cloud.NewContext(projectId, client)
 
 	isSub, err := pubsub.SubExists(ctx, subName)
 	if err != nil {
-		log.Fatal("Failed to determine subscription state", err)
+		logFatal(LogData{
+			"event": "pubsub.error.subexists",
+			"error": err.Error(),
+		})
 	}
 	if !isSub {
 		err = pubsub.CreateSub(ctx, subName, topicName, ackDeadline, "")
 		if err != nil {
-			log.Fatal("Failed to create subscription", err)
+			logFatal(LogData{
+				"event": "pubsub.error.createsub",
+				"error": err.Error(),
+			})
 		}
 	}
 
@@ -36,7 +44,10 @@ func consumePubSubMsgs(projectId string, topicName string) <-chan []byte {
 		for {
 			msgs, err := pubsub.PullWait(ctx, subName, 20)
 			if err != nil {
-				log.Println(err)
+				logInfo(LogData{
+					"event": "pubsub.error.pull",
+					"error": err.Error(),
+				})
 				time.Sleep(time.Second)
 				continue
 			}
@@ -45,7 +56,10 @@ func consumePubSubMsgs(projectId string, topicName string) <-chan []byte {
 				msgC <- m.Data
 				err = pubsub.Ack(ctx, subName, m.AckID)
 				if err != nil {
-					log.Println(err)
+					logInfo(LogData{
+						"event": "pubsub.error.ack",
+						"error": err.Error(),
+					})
 				}
 			}
 		}
