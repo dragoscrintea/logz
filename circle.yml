@@ -4,7 +4,11 @@ machine:
 
 dependencies:
   pre:
-    - GO15VENDOREXPERIMENT=1 go build -o ./deamon -a .
+    - go get golang.org/x/net/context
+    - go get golang.org/x/oauth2/google
+    - go get google.golang.org/cloud
+    - go get google.golang.org/cloud/pubsub
+    - go build -o ./deamon -a .
   override:
     - docker build -t quay.io/rainchasers/pubsub2loggly .
 
