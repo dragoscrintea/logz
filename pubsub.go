@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"time"
 
 	"golang.org/x/net/context"
@@ -41,6 +42,9 @@ func consumePubSubMsgs(projectId string, topicName string) <-chan []byte {
 	}
 
 	go func() {
+		var lastAckErr error
+		var lastDecodeErr error
+
 		for {
 			msgs, err := pubsub.PullWait(ctx, subName, 20)
 			if err != nil {
@@ -52,18 +56,74 @@ func consumePubSubMsgs(projectId string, topicName string) <-chan []byte {
 				continue
 			}
 
+			lastAckErr = nil
+			lastDecodeErr = nil
+
 			for _, m := range msgs {
-				msgC <- m.Data
+				jsonBytes, err := msgToLogJson(m.Data)
+				if err != nil {
+					lastDecodeErr = err
+				} else {
+					msgC <- jsonBytes
+				}
+
 				err = pubsub.Ack(ctx, subName, m.AckID)
 				if err != nil {
-					logInfo(LogData{
-						"event": "pubsub.error.ack",
-						"error": err.Error(),
-					})
+					lastAckErr = err
 				}
+			}
+
+			// protect against flood of logs from this application
+			// when acks/decodes fail but adding rollup & sleep delay
+			if lastAckErr != nil {
+				logInfo(LogData{
+					"event": "pubsub.error.ack",
+					"error": lastAckErr.Error(),
+				})
+				time.Sleep(time.Second)
+			}
+			if lastDecodeErr != nil {
+				logInfo(LogData{
+					"event": "pubsub.error.decode",
+					"error": lastDecodeErr.Error(),
+				})
+				time.Sleep(time.Second)
 			}
 		}
 	}()
 
 	return msgC
+}
+
+type cloudLogJson struct {
+	Meta struct {
+		Timestamp string `json:"timestamp"`
+		Label     struct {
+			PodName string `json:"container.googleapis.com/pod_name"`
+		} `json:"labels"`
+	} `json:"metadata"`
+	Text    string          `json:"textPayload"`
+	RawJson json.RawMessage `json:"structPayload"`
+}
+
+func msgToLogJson(msgData []byte) ([]byte, error) {
+	log := cloudLogJson{}
+
+	err := json.Unmarshal(msgData, &log)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	var jsonBytes []byte
+	if len(log.Text) > 0 {
+		jsonBytes, err = json.Marshal(map[string]string{
+			"timestamp": log.Meta.Timestamp,
+			"pod":       log.Meta.Label.PodName,
+			"text":      log.Text,
+		})
+	} else {
+		jsonBytes, err = log.RawJson.MarshalJSON()
+	}
+
+	return jsonBytes, err
 }

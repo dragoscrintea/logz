@@ -29,6 +29,7 @@ func postToLoggly(url string, logC <-chan []byte) {
 					buffer.Write([]byte("\n"))
 				}
 				buffer.Write(logLine)
+
 			case <-ticker.C:
 				if buffer.Len() > 0 {
 					break buffering
