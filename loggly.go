@@ -12,7 +12,7 @@ func postToLoggly(url string, logC <-chan []byte) {
 	stopping := false
 
 	client := &http.Client{}
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 
 	for {
 		var buffer bytes.Buffer
