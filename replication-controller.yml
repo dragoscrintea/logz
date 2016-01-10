@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: pubsub2loggly
-        image: quay.io/rainchasers/pubsub2loggly:v10
+        image: quay.io/rainchasers/pubsub2loggly:v12
         env:
         - name: GET_HOSTS_FROM
           value: dns
