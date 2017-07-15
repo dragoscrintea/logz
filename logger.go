@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"os"
 	"time"
 )
 
@@ -21,18 +20,18 @@ func newLogger(writer io.Writer, global data) *logger {
 	}
 }
 
-func (l *logger) Info(d data) {
+func (l *logger) Info(event string, d data) {
 	d["type"] = "info"
-	l.writeJSON(d)
+	l.writeJSON(event, d)
 }
 
-func (l *logger) Fatal(d data) {
+func (l *logger) Action(event string, d data) {
 	d["type"] = "action"
-	l.writeJSON(d)
-	os.Exit(1)
+	l.writeJSON(event, d)
 }
 
-func (l *logger) writeJSON(d data) {
+func (l *logger) writeJSON(event string, d data) {
+	d["event"] = event
 	d["timestamp"] = time.Now().Format(time.RFC3339Nano)
 	for k, v := range l.global {
 		d[k] = v

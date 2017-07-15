@@ -45,7 +45,7 @@ func postToLoggly(url string, logC <-chan []byte) {
 
 				req, err := http.NewRequest("POST", url, &data)
 				if err != nil {
-					logInfo(LogData{
+					logInfo(logData{
 						"event": "request.error.create",
 						"error": err.Error(),
 					})
@@ -55,7 +55,7 @@ func postToLoggly(url string, logC <-chan []byte) {
 
 				resp, err := client.Do(req)
 				if err != nil {
-					logInfo(LogData{
+					logInfo(logData{
 						"event": "request.error.execute",
 						"error": err.Error(),
 					})
@@ -64,14 +64,14 @@ func postToLoggly(url string, logC <-chan []byte) {
 				defer resp.Body.Close()
 
 				if resp.StatusCode != http.StatusOK {
-					logInfo(LogData{
+					logInfo(logData{
 						"event":       "request.error.response",
 						"status_code": resp.StatusCode,
 					})
 					return
 				}
 
-				logInfo(LogData{
+				logInfo(logData{
 					"event": "request.ok",
 					"timer": time.Now().Sub(start).Nanoseconds(),
 					"size":  buffer.Len(),
