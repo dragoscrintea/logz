@@ -5,15 +5,18 @@ import (
 )
 
 func main() {
-	projectId := os.Getenv("GCLOUD_PROJECT_ID")
+	log := newLogger(os.Stdout, data{"service": "log.shipper"})
+
+	projectID := os.Getenv("PROJECT_ID")
 	topicName := os.Getenv("PUBSUB_TOPIC")
-	logglyUrl := os.Getenv("LOGGLY_URL")
-	logInfo(LogData{
-		"project_id":   projectId,
+	uploadURL := os.Getenv("UPLOAD_URL")
+
+	log.Info(data{
+		"project_id":   projectID,
 		"pubsub_topic": topicName,
-		"loggly_url":   logglyUrl,
+		"upload_url":   uploadUrl,
 	})
 
-	msgC := consumePubSubMsgs(projectId, topicName)
-	postToLoggly(logglyUrl, msgC)
+	msgC := consumePubSubMsgs(projectID, topicName)
+	postToLoggly(uploadURL, msgC)
 }

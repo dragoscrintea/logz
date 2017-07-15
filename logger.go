@@ -2,23 +2,40 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"os"
+	"time"
 )
 
-type LogData map[string]interface{}
+type data map[string]interface{}
 
-func logInfo(data LogData) {
-	os.Stdout.Write(map2Json(data))
-	os.Stdout.Write([]byte("\n"))
+type logger struct {
+	writer *json.Encoder
+	global data
 }
 
-func logFatal(data LogData) {
-	os.Stdout.Write(map2Json(data))
-	os.Stdout.Write([]byte("\n"))
+func newLogger(writer io.Writer, global data) *logger {
+	return &logger{
+		writer: json.NewEncoder(writer),
+		global: global,
+	}
+}
+
+func (l *logger) Info(d data) {
+	d["type"] = "info"
+	l.writeJSON(d)
+}
+
+func (l *logger) Fatal(d data) {
+	d["type"] = "action"
+	l.writeJSON(d)
 	os.Exit(1)
 }
 
-func map2Json(d LogData) []byte {
-	json, _ := json.Marshal(d)
-	return json
+func (l *logger) writeJSON(d data) {
+	d["timestamp"] = time.Now().Format(time.RFC3339Nano)
+	for k, v := range l.global {
+		d[k] = v
+	}
+	l.writer.Encode(d)
 }
