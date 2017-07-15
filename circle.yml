@@ -1,24 +1,41 @@
 machine:
   services:
     - docker
+  environment:
+    GOOGLE_APPLICATION_CREDENTIALS: "/home/ubuntu/gcloud-service-key.json"
 
 dependencies:
   pre:
-    - go get golang.org/x/net/context
-    - go get golang.org/x/oauth2/google
-    - go get google.golang.org/cloud
-    - go get google.golang.org/cloud/pubsub
-    - CGO_ENABLED=0 go build -o ./deamon -a -installsuffix cgo -ldflags '-s' .
+    - echo $GCLOUD_SERVICE_KEY | base64 --decode > $GOOGLE_APPLICATION_CREDENTIALS
+    - sudo -i /opt/google-cloud-sdk/bin/gcloud --quiet components update
+    - sudo -i /opt/google-cloud-sdk/bin/gcloud --quiet components install kubectl
+    - gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
+    - gcloud --quiet config set project $GCLOUD_PROJECT
+    - gcloud --quiet config set compute/zone $GCLOUD_ZONE
+    - gcloud --quiet config set container/cluster $GCLOUD_CLUSTER
+    - gcloud --quiet container clusters get-credentials $GCLOUD_CLUSTER
+    - gcloud --version
+    - gcloud config list
+    - kubectl describe deployments
+    - mkdir -p $HOME/.go_workspace/src/github.com/rainchasers/
+    - ln -s $HOME/logz $HOME/.go_workspace/src/github.com/rainchasers/logz
+
+compile:
   override:
-    - docker build -t quay.io/rainchasers/pubsub2loggly:v$CIRCLE_BUILD_NUM .
+    - cd $HOME/.go_workspace/src/github.com/rainchasers/logz && CGO_ENABLED=0 go build -o ./deamon -a -installsuffix cgo -ldflags '-s' . && docker build -t eu.gcr.io/tuleyprod/logz:v$CIRCLE_BUILD_NUM .
+    - docker tag eu.gcr.io/tuleyprod/logz:v$CIRCLE_BUILD_NUM eu.gcr.io/tuleyprod/logz:latest
 
 test:
+  pre:
+    - cd $HOME/.go_workspace/src/github.com/rainchasers/logz && go vet $(go list ./... | grep -v /vendor/)
   override:
-    - echo skipping
+    - cd $HOME/.go_workspace/src/github.com/rainchasers/logz && go test $(go list ./... | grep -v /vendor/)
 
 deployment:
-  hub: 
+  production: 
     branch: master
     commands:
-      - docker login -e $DOCKER_EMAIL -u $DOCKER_USERNAME -p $DOCKER_PWD $DOCKER_URL
-      - docker push quay.io/rainchasers/pubsub2loggly:v$CIRCLE_BUILD_NUM
+      - gcloud --quiet docker -- push eu.gcr.io/tuleyprod/logz
+      - kubectl set image deployment/logz logz=eu.gcr.io/tuleyprod/logz:v$CIRCLE_BUILD_NUM
+      - kubectl rollout status deployment/logz
+      - kubectl describe deployments

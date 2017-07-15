@@ -1,7 +1,6 @@
 FROM scratch
 
 # requires statically linked go binary:
-# CGO_ENABLED=0 go build -o ./deamon -a -installsuffix cgo -ldflags '-s' .
 COPY deamon /deamon
 
 # Statically linked go binary requires CA certs for
