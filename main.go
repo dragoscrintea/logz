@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -58,29 +59,41 @@ func run() error {
 		}
 	}()
 
-	// open connection to pubsub
-	t, err := newTopic(ctx, projectID, topicName)
-	if err != nil {
-		log.Action("topic.failed", data{"error": err.Error()})
-		shutdown()
-		return err
-	}
-	err = t.Subscribe(ctx, func(logLine []byte, err error) {
-		if err != nil {
-			// TODO: beware log explosion
-		} else {
-			// TODO: add logline
-		}
-	})
-	t.Stop()
-	if err != nil {
-		log.Action("subscribe.failed", data{"error": err.Error()})
-		shutdown()
-		return err
-	}
+	// create log line channel
+	logLineC := make(chan []byte)
 
-	// msgC := consumePubSubMsgs(projectID, topicName)
-	// postToLoggly(uploadURL, msgC)
+	// open connection to pubsub
+	go func() {
+		defer func() {
+			close(logLineC)
+		}()
+
+		t, err := newTopic(ctx, projectID, topicName)
+		if err != nil {
+			log.Action("topic.failed", data{"error": err.Error()})
+			shutdown()
+			return
+		}
+		err = t.Subscribe(ctx, func(logLine []byte, err error) {
+			if err != nil {
+				// prevent logline explosion only log subscription errors
+				// based on 1/100 chance, so will catch mass errors
+				if rand.Intn(100) == 17 {
+					log.Action("subscribe.failed", data{"error": err.Error()})
+				}
+				return
+			}
+			logLineC <- logLine
+		})
+		t.Stop()
+		if err != nil {
+			log.Action("subscribe.error", data{"error": err.Error()})
+			shutdown()
+			return
+		}
+	}()
+
+	upload(log, uploadURL, logLineC)
 
 	return nil
 }

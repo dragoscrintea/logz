@@ -66,7 +66,7 @@ func (t *topic) Subscribe(ctx context.Context, fn func(s []byte, err error)) err
 		return err
 	}
 
-	sub, err = client.CreateSubscription(ctx, subName, t.pubSub, ackDeadline, nil)
+	sub, err := client.CreateSubscription(ctx, subName, t.pubSub, ackDeadline, nil)
 	if err != nil {
 		return err
 	}
