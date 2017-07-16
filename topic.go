@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -109,11 +110,17 @@ func msgToLogJSON(msgData []byte) ([]byte, error) {
 
 	var jsonBytes []byte
 	if len(log.Text) > 0 {
-		jsonBytes, err = json.Marshal(map[string]string{
-			"timestamp": log.Timestamp,
-			"pod":       log.Label.PodName,
-			"text":      log.Text,
-		})
+		// in stackdriver v2, the json detection has changed and raw JSON
+		// is coming through as text, so temporarily:
+		if strings.HasPrefix(log.Text, "{") {
+			jsonBytes = []byte(strings.TrimSpace(log.Text))
+		} else {
+			jsonBytes, err = json.Marshal(map[string]string{
+				"timestamp": log.Timestamp,
+				"pod":       log.Label.PodName,
+				"text":      log.Text,
+			})
+		}
 	} else {
 		jsonBytes, err = log.RawJSON.MarshalJSON()
 	}
