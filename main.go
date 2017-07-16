@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -74,7 +76,8 @@ func run() error {
 			shutdown()
 			return
 		}
-		err = t.Subscribe(ctx, func(logLine []byte, err error) {
+		subName := fmt.Sprintf("%x", sha256.Sum256([]byte(uploadURL)))
+		err = t.Subscribe(ctx, subName, func(logLine []byte, err error) {
 			if err != nil {
 				// prevent logline explosion only log subscription errors
 				// based on 1/100 chance, so will catch mass errors

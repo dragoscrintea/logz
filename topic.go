@@ -52,25 +52,29 @@ func newTopic(ctx context.Context, projectID string, topicName string) (*topic, 
 }
 
 // Subscribe reads JSON-encoded logs from the topic and decodes them
-func (t *topic) Subscribe(ctx context.Context, fn func(s []byte, err error)) error {
+func (t *topic) Subscribe(ctx context.Context, subName string, fn func(s []byte, err error)) error {
 	const ackDeadline = time.Second * 20
 
 	if t.pubSub == nil {
 		return errors.New("Topic has no project ID")
 	}
 
-	subName := t.pubSub.ID() + "." + time.Now().Format("v2006-01-02-15-04-05.999999")
-
 	client, err := pubsub.NewClient(ctx, t.ProjectID)
 	if err != nil {
 		return err
 	}
 
-	sub, err := client.CreateSubscription(ctx, subName, t.pubSub, ackDeadline, nil)
+	sub := client.Subscription(subName)
+	exists, err := sub.Exists(ctx)
 	if err != nil {
 		return err
 	}
-	defer sub.Delete(context.Background())
+	if !exists {
+		sub, err = client.CreateSubscription(ctx, subName, t.pubSub, ackDeadline, nil)
+		if err != nil {
+			return err
+		}
+	}
 
 	err = sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
 		fn(msgToLogJSON(m.Data))
