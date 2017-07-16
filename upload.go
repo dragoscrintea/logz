@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -70,9 +71,14 @@ func upload(log *logger, url string, logC <-chan []byte) {
 				}
 				defer resp.Body.Close()
 
+				b := new(bytes.Buffer)
+				b.ReadFrom(resp.Body)
+				respMsg := strings.TrimSpace(b.String())
+
 				if resp.StatusCode != http.StatusOK {
 					log.Action("request.error.response", data{
 						"status_code": resp.StatusCode,
+						"msg":         respMsg,
 						"timer":       time.Now().Sub(start).Seconds(),
 						"size":        buffer.Len(),
 					})
@@ -81,6 +87,7 @@ func upload(log *logger, url string, logC <-chan []byte) {
 
 				log.Info("request.ok", data{
 					"timer": time.Now().Sub(start).Seconds(),
+					"msg":   respMsg,
 					"size":  buffer.Len(),
 				})
 
