@@ -5,7 +5,7 @@ machine:
     GOOGLE_APPLICATION_CREDENTIALS: "/home/ubuntu/gcloud-service-key.json"
 
 dependencies:
-  pre:
+  override:
     - echo $GCLOUD_SERVICE_KEY | base64 --decode > $GOOGLE_APPLICATION_CREDENTIALS
     - sudo -i /opt/google-cloud-sdk/bin/gcloud --quiet components update
     - sudo -i /opt/google-cloud-sdk/bin/gcloud --quiet components install kubectl
@@ -26,9 +26,8 @@ compile:
     - docker tag eu.gcr.io/tuleyprod/logz:v$CIRCLE_BUILD_NUM eu.gcr.io/tuleyprod/logz:latest
 
 test:
-  pre:
-    - cd $HOME/.go_workspace/src/github.com/rainchasers/logz && go vet $(go list ./... | grep -v /vendor/)
   override:
+    - cd $HOME/.go_workspace/src/github.com/rainchasers/logz && go vet $(go list ./... | grep -v /vendor/)
     - cd $HOME/.go_workspace/src/github.com/rainchasers/logz && go test $(go list ./... | grep -v /vendor/)
 
 deployment:
