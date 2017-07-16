@@ -87,15 +87,16 @@ func (t *topic) Subscribe(ctx context.Context, subName string, fn func(s []byte,
 	return nil
 }
 
+// Using Stackdriver v2 format
+// Spec: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry
+// View actuals at: https://console.cloud.google.com/logs/viewer
 type cloudLogJSON struct {
-	Meta struct {
-		Timestamp string `json:"timestamp"`
-		Label     struct {
-			PodName string `json:"container.googleapis.com/pod_name"`
-		} `json:"labels"`
-	} `json:"metadata"`
+	Timestamp string `json:"timestamp"`
+	Label     struct {
+		PodName string `json:"container.googleapis.com/pod_name"`
+	} `json:"labels"`
 	Text    string          `json:"textPayload"`
-	RawJSON json.RawMessage `json:"structPayload"`
+	RawJSON json.RawMessage `json:"jsonPayload"`
 }
 
 func msgToLogJSON(msgData []byte) ([]byte, error) {
@@ -109,8 +110,8 @@ func msgToLogJSON(msgData []byte) ([]byte, error) {
 	var jsonBytes []byte
 	if len(log.Text) > 0 {
 		jsonBytes, err = json.Marshal(map[string]string{
-			"timestamp": log.Meta.Timestamp,
-			"pod":       log.Meta.Label.PodName,
+			"timestamp": log.Timestamp,
+			"pod":       log.Label.PodName,
 			"text":      log.Text,
 		})
 	} else {
