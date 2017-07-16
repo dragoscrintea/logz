@@ -21,6 +21,6 @@ spec:
         - name: PROJECT_ID
           value: tuleyprod
         - name: PUBSUB_TOPIC
-          value: gke-logs
+          value: logz.io
         - name: UPLOAD_URL
           value: https://listener.logz.io:8071?token=redacted
